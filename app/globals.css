@@ -3,3 +3,9 @@
 @tailwind utilities;
 
 body { @apply bg-gray-900 text-white; }
+
+@layer components {
+  .prose {
+    @apply text-muted-foreground;
+  }
+}
