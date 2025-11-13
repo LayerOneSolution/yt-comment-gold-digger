@@ -12,7 +12,7 @@ import { Copy, Star, TrendingUp } from "lucide-react";
 
 export default function Home() {
   const [url, setUrl] = useState("");
-  const [result, setResult] = useState<any>(null);
+   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -58,13 +58,18 @@ export default function Home() {
 
         <div className="flex flex-col sm:flex-row gap-4 items-stretch w-full">
           <Input
-            placeholder="Paste YouTube link..."
+            placeholder="Paste YouTube link... (Press Enter to search)"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             onPaste={(e) => {
               e.preventDefault();
               const text = e.clipboardData.getData("text/plain");
               setUrl(text);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !loading && url) {
+                summarize();
+              }
             }}
             className="flex-1 min-w-0 text-base font-mono bg-gray-900 text-white placeholder:text-gray-400 border-gray-700"
             disabled={loading}
@@ -109,6 +114,36 @@ export default function Home() {
               <CardContent>
                 <Separator className="my-4" />
 
+                {/* TOP ANECDOTES */}
+                {result.anecdotes?.length > 0 ? (
+                  <div className="space-y-6">
+                    <h3 className="font-semibold text-lg">Top Anecdotes</h3>
+                    {result.anecdotes.map((a: any, i: number) => (
+                      <div key={i} className="border rounded-lg p-4 bg-green-50 dark:bg-green-900/20">
+                        <div className="flex items-center gap-1 mb-2">
+                          {[...Array(a.stars)].map((_, s) => (
+                            <Star key={s} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                          ))}
+                          <span className="text-sm text-muted-foreground ml-2">Score: {a.stars}/5</span>
+                        </div>
+                        <p className="text-sm leading-relaxed">{a.story}</p>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="mt-2 h-8"
+                          onClick={() => copyToClipboard(a.story)}
+                        >
+                          <Copy className="w-4 h-4 mr-1" /> Copy
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">No strong anecdotes found.</p>
+                )}
+
+                <Separator className="my-6" />
+
                 {/* TOP 20 COMMENTS */}
                 {result.topComments?.length > 0 && (
                   <div className="space-y-6">
@@ -148,36 +183,6 @@ export default function Home() {
                       ))}
                     </div>
                   </div>
-                )}
-
-                <Separator className="my-6" />
-
-                {/* ANECDOTES */}
-                {result.anecdotes?.length > 0 ? (
-                  <div className="space-y-6">
-                    <h3 className="font-semibold text-lg">Top Anecdotes</h3>
-                    {result.anecdotes.map((a: any, i: number) => (
-                      <div key={i} className="border rounded-lg p-4 bg-muted/50">
-                        <div className="flex items-center gap-1 mb-2">
-                          {[...Array(a.stars)].map((_, s) => (
-                            <Star key={s} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                          ))}
-                          <span className="text-sm text-muted-foreground ml-2">Score: {a.stars}/5</span>
-                        </div>
-                        <p className="text-sm leading-relaxed">{a.story}</p>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="mt-2 h-8"
-                          onClick={() => copyToClipboard(a.story)}
-                        >
-                          <Copy className="w-4 h-4 mr-1" /> Copy
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground">No strong anecdotes found.</p>
                 )}
               </CardContent>
             </Card>
