@@ -1,94 +1,95 @@
 // app/api/summarize/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
-// === Types ===
-interface YouTubeComment {
-  text: string;
-  author: string;
-  likes: number;
-  publishedAt: string;
+const API_KEY = process.env.YOUTUBE_API_KEY;
+
+if (!API_KEY) {
+  throw new Error("YOUTUBE_API_KEY is missing in .env.local");
 }
 
-interface VideoInfo {
-  title: string;
-  views: string;
-}
+export async function POST(request: NextRequest) {
+  const { url } = await request.json();
 
-interface APIResponse {
-  video?: VideoInfo;
-  comments: YouTubeComment[];
-  totalComments: number;
-}
+  // Extract video ID
+  const match = url.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})/);
+  if (!match) {
+    return Response.json({ error: "Invalid YouTube URL" }, { status: 400 });
+  }
+  const videoId = match[1];
 
-// === Helper: Fetch Comments ===
-async function getVideoComments(videoId: string): Promise<APIResponse> {
-  const key = process.env.YOUTUBE_API_KEY;
-  if (!key) throw new Error("YOUTUBE_API_KEY missing");
-
-  const res = await fetch(
-    `https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${videoId}&maxResults=100&key=${key}`
-  );
-  const data = await res.json();
-
-  if (data.error) throw new Error(data.error.message);
-
-  const comments: YouTubeComment[] = (data.items || []).map((item: any) => {
-    const snippet = item.snippet.topLevelComment.snippet;
-    return {
-      text: snippet.textDisplay || "",
-      author: snippet.authorDisplayName || "Anonymous",
-      likes: snippet.likeCount || 0,
-      publishedAt: snippet.publishedAt || "",
-    };
-  });
-
-  // Mock video info (replace with video API call if needed)
-  const videoInfo: VideoInfo = {
-    title: "Sample Video",
-    views: "1.2M",
-  };
-
-  return {
-    video: videoInfo,
-    comments,
-    totalComments: comments.length,
-  };
-}
-
-// === High-Value Filter (Simple Version) ===
-function isHighValue(comment: string): boolean {
-  const spam = ["great", "nice", "first", "fire", "wow", "amazing", "super"];
-  const lower = comment.toLowerCase();
-  if (comment.length < 30) return false;
-  if (spam.some((word) => lower.includes(word)) && comment.length < 100) return false;
-  return true;
-}
-
-// === POST Handler ===
-export async function POST(req: NextRequest) {
   try {
-    const { url } = await req.json();
-    const videoId = url.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})/)?.[1];
-    if (!videoId) return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
+    // 1. Get video details
+    const videoRes = await fetch(
+      `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${videoId}&key=${API_KEY}`
+    );
+    const videoData = await videoRes.json();
+    if (!videoData.items?.[0]) {
+      return Response.json({ error: "Video not found" }, { status: 404 });
+    }
 
-    const { video, comments, totalComments } = await getVideoComments(videoId);
-    const highValue = comments.filter((c) => isHighValue(c.text));
+    const video = videoData.items[0];
+    const title = video.snippet.title;
+    const views = parseInt(video.statistics.viewCount).toLocaleString();
+    const totalComments = parseInt(video.statistics.commentCount);
 
-    // Mock summary (replace with OpenAI later)
-    const summary = `Found ${highValue.length} high-value comments out of ${totalComments}.`;
+    // 2. Get comments (max 100)
+    const commentsRes = await fetch(
+      `https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${videoId}&maxResults=100&key=${API_KEY}`
+    );
+    const commentsData = await commentsRes.json();
 
-    return NextResponse.json({
-      video,
+    const comments = commentsData.items?.map(
+      (item: any) => item.snippet.topLevelComment.snippet.textDisplay
+    ) || [];
+
+    // 3. High-value filter (simple keywords)
+    const highValueKeywords = [
+      "best",
+      "love",
+      "amazing",
+      "help",
+      "tutorial",
+      "fixed",
+      "worked",
+      "thanks",
+      "genius",
+      "insane",
+      "mind blown",
+      "life changing",
+    ];
+
+    const highValueComments = comments.filter((c: string) =>
+      highValueKeywords.some((kw) => c.toLowerCase().includes(kw))
+    );
+
+    const highValueCount = highValueComments.length;
+    const highValueRatio = totalComments > 0 ? ((highValueCount / totalComments) * 100).toFixed(1) : "0";
+
+    // 4. Build summary
+    const topThemes = highValueComments
+      .slice(0, 3)
+      .map((c: string) => `• "${c.substring(0, 80)}${c.length > 80 ? "..." : ""}"`)
+      .join("\n");
+
+    const summary = `Found ${highValueCount} high-value comments out of ${totalComments} total.
+
+Top themes:
+${topThemes || "No strong signals detected."}
+
+Signal: ${highValueRatio}% of comments contain praise, gratitude, or actionable feedback.`;
+
+    return Response.json({
+      video: { title },
       stats: {
-        totalViews: video?.views || "N/A",
+        totalViews: views,
         totalComments,
-        highValueCount: highValue.length,
-        highValueRatio: totalComments > 0 ? `${((highValue.length / totalComments) * 100).toFixed(1)}%` : "0%",
+        highValueCount,
+        highValueRatio: `${highValueRatio}%`,
       },
       summary,
-      topComments: highValue.slice(0, 5),
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    console.error("YouTube API error:", error);
+    return Response.json({ error: "Failed to fetch data" }, { status: 500 });
   }
 }
