@@ -33,7 +33,10 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-background py-12 px-6 md:px-12 lg:px-24">
+      {/* Centered container with left/right margins */}
       <div className="max-w-5xl mx-auto space-y-12">
+        
+        {/* Title */}
         <div className="text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2">
             YouTube Comment Gold Digger
@@ -43,6 +46,7 @@ export default function Home() {
           </p>
         </div>
 
+        {/* Input Row — Wider Input */}
         <div className="flex flex-col sm:flex-row gap-4 items-stretch">
           <Input
             placeholder="Paste YouTube link here..."
@@ -50,6 +54,7 @@ export default function Home() {
             onChange={(e) => setUrl(e.target.value)}
             className="flex-1 min-w-0 text-base"
             disabled={loading}
+            // Ensures long URLs don't overflow
             style={{ wordBreak: "break-all" }}
           />
           <Button
@@ -61,9 +66,12 @@ export default function Home() {
           </Button>
         </div>
 
+        {/* Loading State */}
         {loading && (
           <Card>
-            <CardHeader><Skeleton className="h-8 w-96" /></CardHeader>
+            <CardHeader>
+              <Skeleton className="h-8 w-96" />
+            </CardHeader>
             <CardContent className="space-y-4">
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-4 w-5/6" />
@@ -72,6 +80,7 @@ export default function Home() {
           </Card>
         )}
 
+        {/* Result */}
         {result && !loading && (
           <div className="space-y-8">
             <Card>
@@ -86,14 +95,37 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <Separator className="my-4" />
-                <pre className="whitespace-pre-wrap text-sm font-sans">
-                  {result.summary || "No summary available."}
-                </pre>
+                <div className="prose prose-invert max-w-none">
+                  <pre className="whitespace-pre-wrap text-sm font-sans">
+                    {result.summary || "No summary available."}
+                  </pre>
+                </div>
               </CardContent>
             </Card>
+
+            {/* Top Comments */}
+            {result.topComments?.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Top Insights</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {result.topComments.slice(0, 5).map((c: any, i: number) => (
+                      <div key={i} className="border-l-4 border-primary pl-4 py-2">
+                        <p className="text-sm text-muted-foreground">@{c.author}</p>
+                        <p className="text-foreground text-base">{c.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
       </div>
     </main>
+  );
+}
   );
 }
