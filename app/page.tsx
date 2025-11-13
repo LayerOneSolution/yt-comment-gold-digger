@@ -35,10 +35,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-background py-12 px-6 md:px-12 lg:px-24">
-      {/* ---------- CENTERED CONTAINER ---------- */}
       <div className="max-w-5xl mx-auto space-y-12">
-
-        {/* ---------- TITLE ---------- */}
         <div className="text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2">
             YouTube Comment Gold Digger
@@ -48,7 +45,6 @@ export default function Home() {
           </p>
         </div>
 
-        {/* ---------- INPUT + BUTTON ---------- */}
         <div className="flex flex-col sm:flex-row gap-4 items-stretch w-full">
           <Input
             placeholder="Paste YouTube link here..."
@@ -67,7 +63,6 @@ export default function Home() {
           </Button>
         </div>
 
-        {/* ---------- LOADING ---------- */}
         {loading && (
           <Card>
             <CardHeader>
@@ -81,7 +76,6 @@ export default function Home() {
           </Card>
         )}
 
-        {/* ---------- RESULT ---------- */}
         {result && !loading && (
           <div className="space-y-8">
             <Card>
@@ -105,10 +99,13 @@ export default function Home() {
 
               <CardContent>
                 <Separator className="my-4" />
-                {/* ---- SUMMARY TEXT ---- */}
-                <pre className="whitespace-pre-wrap text-sm font-sans text-foreground/80">
-                  {result.summary || "No summary available."}
-                </pre>
+                {/* FIXED: No hydration error */}
+                <div 
+                  className="whitespace-pre-wrap text-sm font-sans text-foreground/80"
+                  dangerouslySetInnerHTML={{ 
+                    __html: result.summary || "No summary available." 
+                  }} 
+                />
               </CardContent>
             </Card>
           </div>
