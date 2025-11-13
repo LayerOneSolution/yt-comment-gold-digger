@@ -1,5 +1,4 @@
 // app/page.tsx
-// CACHE-BUSTER v2025-08-11 – forces Tailwind rebuild
 "use client";
 
 import { useState, useEffect } from "react";
@@ -9,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { Copy, Star } from "lucide-react";
 
 export default function Home() {
   const [url, setUrl] = useState("");
@@ -38,6 +38,10 @@ export default function Home() {
     }
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+  };
+
   if (!mounted) return null;
 
   return (
@@ -45,19 +49,24 @@ export default function Home() {
       <div className="max-w-5xl mx-auto space-y-12">
         <div className="text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2">
-            YouTube Comment Gold Digger
+            Anecdote Gold Digger
           </h1>
           <p className="text-muted-foreground text-lg">
-            Find the 1% of comments that actually matter
+            Find real stories of natural healing from YouTube comments
           </p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 items-stretch w-full">
           <Input
-            placeholder="Paste YouTube link here..."
+            placeholder="Paste YouTube link..."
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            className="flex-1 min-w-0 text-base font-mono"
+            onPaste={(e) => {
+              e.preventDefault();
+              const text = e.clipboardData.getData("text/plain");
+              setUrl(text);
+            }}
+            className="flex-1 min-w-0 text-base font-mono bg-gray-900 text-white placeholder:text-gray-400 border-gray-700"
             disabled={loading}
             style={{ wordBreak: "break-all" }}
           />
@@ -66,7 +75,7 @@ export default function Home() {
             disabled={loading || !url}
             className="w-full sm:w-auto"
           >
-            {loading ? "Digging..." : "Summarize"}
+            {loading ? "Digging..." : "Find Anecdotes"}
           </Button>
         </div>
 
@@ -91,24 +100,40 @@ export default function Home() {
                   {result.video?.title || "Untitled Video"}
                 </CardTitle>
                 <div className="flex flex-wrap gap-2 mt-3">
-                  <Badge variant="secondary">
-                    {result.stats?.totalViews || "N/A"} views
-                  </Badge>
-                  <Badge variant="secondary">
-                    {result.stats?.totalComments || 0} comments
-                  </Badge>
-                  <Badge>{result.stats?.highValueCount || 0} high-value</Badge>
-                  <Badge variant="outline">
-                    {result.stats?.highValueRatio || "0%"} signal
-                  </Badge>
+                  <Badge variant="secondary">{result.stats?.totalViews} views</Badge>
+                  <Badge variant="secondary">{result.stats?.totalComments} comments</Badge>
+                  <Badge>{result.stats?.highValueCount} potential</Badge>
+                  <Badge variant="outline">{result.stats?.highValueRatio} signal</Badge>
                 </div>
               </CardHeader>
-
               <CardContent>
                 <Separator className="my-4" />
-                <p className="whitespace-pre-wrap text-sm font-sans text-foreground/80">
-                  {result.summary || "No summary available."}
-                </p>
+                {result.anecdotes?.length > 0 ? (
+                  <div className="space-y-6">
+                    <h3 className="font-semibold text-lg">Top Anecdotes</h3>
+                    {result.anecdotes.map((a: any, i: number) => (
+                      <div key={i} className="border rounded-lg p-4 bg-muted/50">
+                        <div className="flex items-center gap-1 mb-2">
+                          {[...Array(a.stars)].map((_, s) => (
+                            <Star key={s} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                          ))}
+                          <span className="text-sm text-muted-foreground ml-2">Score: {a.stars}/5</span>
+                        </div>
+                        <p className="text-sm leading-relaxed">{a.story}</p>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="mt-2 h-8"
+                          onClick={() => copyToClipboard(a.story)}
+                        >
+                          <Copy className="w-4 h-4 mr-1" /> Copy
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">No strong anecdotes found in top 100 comments.</p>
+                )}
               </CardContent>
             </Card>
           </div>
