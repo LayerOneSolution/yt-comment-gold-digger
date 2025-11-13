@@ -12,7 +12,7 @@ import { Copy, Star, TrendingUp } from "lucide-react";
 
 export default function Home() {
   const [url, setUrl] = useState("");
-   const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -49,10 +49,13 @@ export default function Home() {
       <div className="max-w-5xl mx-auto space-y-12">
         <div className="text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2">
-            Anecdote Gold Digger
+            Anecdote Search
           </h1>
           <p className="text-muted-foreground text-lg">
-            Find real stories of natural healing from YouTube comments
+            Find real stories of natural healing from YouTube User's comments
+          </p>
+          <p className="text-muted-foreground text-sm mt-2">
+            - Powered by Distributed Trust -
           </p>
         </div>
 

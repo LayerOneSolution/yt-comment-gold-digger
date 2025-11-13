@@ -12,6 +12,13 @@ if (!API_KEY || !process.env.OPENAI_API_KEY) {
   throw new Error("Missing API keys in .env.local");
 }
 
+// FAMILY KEYWORDS — PRIORITY 1
+const FAMILY_KEYWORDS = [
+  "mom", "mother", "dad", "father", "grandma", "grandpa", "grandmother", "grandfather",
+  "sister", "brother", "aunt", "uncle", "son", "daughter", "husband", "wife",
+  "friend", "best friend", "neighbor", "cousin"
+];
+
 export async function POST(request: NextRequest) {
   const { url } = await request.json();
 
@@ -59,13 +66,13 @@ export async function POST(request: NextRequest) {
           {
             role: "system",
             content: `You are a health comment analyst. 
-Return ONLY valid JSON (no markdown, no code blocks):
+Return ONLY valid JSON (no markdown):
 {
   "topComments": [{"text": "...", "sentiment": 5}],
   "anecdotes": [{"story": "...", "stars": 5}],
   "summary": "..."
 }
-`,
+PRIORITIZE comments mentioning family/friends (mom, dad, etc.) — put them first.`,
           },
           {
             role: "user",
@@ -77,13 +84,11 @@ Return ONLY valid JSON (no markdown, no code blocks):
       });
 
       let raw = completion.choices[0]?.message?.content?.trim() || "";
-
-      // REMOVE MARKDOWN CODE BLOCKS
       raw = raw.replace(/```json/g, "").replace(/```/g, "").trim();
 
       if (raw) {
         const parsed = JSON.parse(raw);
-        topComments = (parsed.topComments || []).slice(0, 20).sort((a: any, b: any) => b.sentiment - a.sentiment);
+        topComments = (parsed.topComments || []).slice(0, 20);
         anecdotes = parsed.anecdotes || [];
         summary = parsed.summary || summary;
       }
@@ -91,15 +96,25 @@ Return ONLY valid JSON (no markdown, no code blocks):
       console.error("OpenAI failed:", aiError);
     }
 
+    // PRIORITIZE FAMILY COMMENTS IN BOTH LISTS
+    const prioritizeFamily = (items: any[]) =>
+      items.sort((a, b) => {
+        const aHasFamily = FAMILY_KEYWORDS.some(kw => a.text.toLowerCase().includes(kw));
+        const bHasFamily = FAMILY_KEYWORDS.some(kw => b.text.toLowerCase().includes(kw));
+        if (aHasFamily && !bHasFamily) return -1;
+        if (!aHasFamily && bHasFamily) return 1;
+        return b.sentiment - a.sentiment; // Then by sentiment
+      });
+
+    topComments = prioritizeFamily(topComments);
+    anecdotes = prioritizeFamily(anecdotes.map(a => ({ text: a.story, sentiment: a.stars })))
+      .map((a, i) => anecdotes[i]); // Restore original object
+
     const highValueCount = comments.filter((c: string) =>
       /med|pill|dose|stop|reduce|mom|dad|grand|healed|fixed|tea|juice|diet/i.test(c)
     ).length;
 
     const highValueRatio = totalComments > 0 ? ((highValueCount / totalComments) * 100).toFixed(1) : "0";
-
-    // Deduplicate: Remove anecdotes from topComments to avoid overlap
-    const anecdoteTexts = anecdotes.map((a: any) => a.story.toLowerCase());
-    const uniqueTopComments = topComments.filter((c: any) => !anecdoteTexts.includes(c.text.toLowerCase()));
 
     return Response.json({
       video: { title },
@@ -109,7 +124,7 @@ Return ONLY valid JSON (no markdown, no code blocks):
         highValueCount,
         highValueRatio: `${highValueRatio}%`,
       },
-      topComments: uniqueTopComments,
+      topComments,
       anecdotes,
       summary,
     });
