@@ -33,40 +33,40 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-background py-12 px-6 md:px-12 lg:px-24">
-      {/* Centered container with left/right margins */}
+      {/* Max width + centered */}
       <div className="max-w-5xl mx-auto space-y-12">
-        
+
         {/* Title */}
         <div className="text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2">
             YouTube Comment Gold Digger
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-lg">
             Find the 1% of comments that actually matter
           </p>
         </div>
 
-        {/* Input Row — Wider Input */}
-        <div className="flex flex-col sm:flex-row gap-4 items-stretch">
+        {/* Input Row — FULL WIDTH */}
+        <div className="flex flex-col sm:flex-row gap-4 items-stretch w-full">
           <Input
             placeholder="Paste YouTube link here..."
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            className="flex-1 min-w-0 text-base"
+            className="flex-1 min-w-0 text-base font-mono"
             disabled={loading}
-            // Ensures long URLs don't overflow
+            // Ensures long URLs wrap cleanly
             style={{ wordBreak: "break-all" }}
           />
           <Button
             onClick={summarize}
             disabled={loading || !url}
-            className="sm:w-auto w-full"
+            className="w-full sm:w-auto min-w-fit"
           >
             {loading ? "Digging..." : "Summarize"}
           </Button>
         </div>
 
-        {/* Loading State */}
+        {/* Loading */}
         {loading && (
           <Card>
             <CardHeader>
@@ -85,7 +85,9 @@ export default function Home() {
           <div className="space-y-8">
             <Card>
               <CardHeader>
-                <CardTitle className="text-2xl">{result.video?.title || "Untitled Video"}</CardTitle>
+                <CardTitle className="text-2xl break-words">
+                  {result.video?.title || "Untitled Video"}
+                </CardTitle>
                 <div className="flex flex-wrap gap-2 mt-3">
                   <Badge variant="secondary">{result.stats?.totalViews || "N/A"} views</Badge>
                   <Badge variant="secondary">{result.stats?.totalComments || 0} comments</Badge>
@@ -95,32 +97,11 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <Separator className="my-4" />
-                <div className="prose prose-invert max-w-none">
-                  <pre className="whitespace-pre-wrap text-sm font-sans">
-                    {result.summary || "No summary available."}
-                  </pre>
-                </div>
+                <pre className="whitespace-pre-wrap text-sm font-sans text-foreground/80">
+                  {result.summary || "No summary available."}
+                </pre>
               </CardContent>
             </Card>
-
-            {/* Top Comments */}
-            {result.topComments?.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Top Insights</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {result.topComments.slice(0, 5).map((c: any, i: number) => (
-                      <div key={i} className="border-l-4 border-primary pl-4 py-2">
-                        <p className="text-sm text-muted-foreground">@{c.author}</p>
-                        <p className="text-foreground text-base">{c.text}</p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
         )}
       </div>
